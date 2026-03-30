@@ -1,305 +1,159 @@
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, AlertTriangle } from "lucide-react";
+import { Eye, AlertTriangle, User, Phone, MapPin, Search, Star, CreditCard, History, Wallet, CheckCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
-
-interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  email: string;
-  governorate: string;
-  totalSpent: string;
-  totalPaid: string;
-  remainingDebt: string;
-  points: number;
-  registrationSource: string;
-  registrationDate: string;
-  orders: number;
-}
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
 
-  // Sample customers data
-  const customers: Customer[] = [
-    {
-      id: 1,
-      name: "أحمد محمد",
-      phone: "01012345678",
-      email: "ahmed@example.com",
-      governorate: "القاهرة",
-      totalSpent: "2500",
-      totalPaid: "2000",
-      remainingDebt: "500",
-      points: 250,
-      registrationSource: "موقع الويب",
-      registrationDate: "2026-01-15",
-      orders: 5,
-    },
-    {
-      id: 2,
-      name: "فاطمة علي",
-      phone: "01098765432",
-      email: "fatima@example.com",
-      governorate: "الجيزة",
-      totalSpent: "1800",
-      totalPaid: "1800",
-      remainingDebt: "0",
-      points: 180,
-      registrationSource: "فيسبوك",
-      registrationDate: "2026-02-01",
-      orders: 3,
-    },
-    {
-      id: 3,
-      name: "محمود حسن",
-      phone: "01055555555",
-      email: "mahmoud@example.com",
-      governorate: "الإسكندرية",
-      totalSpent: "3200",
-      totalPaid: "2500",
-      remainingDebt: "700",
-      points: 320,
-      registrationSource: "إنستجرام",
-      registrationDate: "2025-12-10",
-      orders: 8,
-    },
-    {
-      id: 4,
-      name: "سارة يوسف",
-      phone: "01077777777",
-      email: "sarah@example.com",
-      governorate: "القاهرة",
-      totalSpent: "1200",
-      totalPaid: "600",
-      remainingDebt: "600",
-      points: 120,
-      registrationSource: "توصية",
-      registrationDate: "2026-03-01",
-      orders: 2,
-    },
-  ];
+  const customersQuery = (trpc as any).customers.list.useQuery({
+    query: searchQuery || undefined,
+  });
 
-  const customersWithDebt = customers.filter((c) => Number(c.remainingDebt) > 0);
-  const filteredCustomers = customers.filter((c) =>
-    c.name.includes(searchQuery) || c.phone.includes(searchQuery) || c.email.includes(searchQuery)
-  );
+  const customers = customersQuery.data || [];
+  const isLoading = customersQuery.isLoading;
 
-  const handleRecordPayment = () => {
-    if (!paymentAmount || Number(paymentAmount) <= 0) {
-      toast.error("يرجى إدخال مبلغ صحيح");
-      return;
-    }
-    toast.success(`تم تسجيل دفعة بقيمة ${paymentAmount} ج.م`);
-    setPaymentAmount("");
-    setIsDetailsDialogOpen(false);
-  };
-
-  const totalDebt = customersWithDebt.reduce((sum, c) => sum + Number(c.remainingDebt), 0);
+  const totalDebt = (customers || []).reduce((sum: number, c: any) => sum + Number(c.remainingDebt), 0);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">إدارة العملاء</h1>
-          <p className="text-muted-foreground">إدارة بيانات العملاء والمديونيات والنقاط</p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">إدارة العملاء</h1>
+          <p className="text-muted-foreground">بيانات العملاء، المديونيات، ونقاط الولاء.</p>
         </div>
-
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي العملاء</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{customers.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">عملاء بمديونيات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{customersWithDebt.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي المديونيات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{totalDebt.toFixed(2)} ج.م</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي النقاط الموزعة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{customers.reduce((sum, c) => sum + c.points, 0)}</div>
-            </CardContent>
-          </Card>
+        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border px-6 h-14">
+          <div className="flex flex-col text-right">
+            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">إجمالي المديونيات</span>
+            <span className="text-xl font-bold text-red-600">{totalDebt.toLocaleString()} ج.م</span>
+          </div>
+          <div className="h-8 w-[1px] bg-slate-200 mx-2" />
+          <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+            <Wallet className="h-5 w-5" />
+          </div>
         </div>
+      </div>
 
-        {/* Debt Alert */}
-        {customersWithDebt.length > 0 && (
-          <Card className="mb-8 border-red-200 bg-red-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-900">
-                <AlertTriangle className="h-5 w-5" />
-                تنبيه: عملاء بمديونيات
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {customersWithDebt.slice(0, 5).map((customer) => (
-                  <p key={customer.id} className="text-sm text-red-800">
-                    <strong>{customer.name}</strong> - {customer.phone} - متبقي: {Number(customer.remainingDebt).toFixed(2)} ج.م
-                  </p>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Search */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>البحث</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Filters & Search */}
+      <Card className="border-none shadow-sm overflow-hidden bg-white">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex-1 w-full space-y-2">
+            <label className="text-sm font-bold flex items-center gap-2">
+              <Search className="h-4 w-4 text-primary" />
+              البحث عن عميل
+            </label>
             <Input
-              placeholder="ابحث بالاسم أو الهاتف أو البريد الإلكتروني..."
+              placeholder="ابحث بالاسم، رقم الهاتف، أو المحافظة..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded-xl h-11 border-slate-200"
             />
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Customers Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>قائمة العملاء</CardTitle>
-            <CardDescription>{filteredCustomers.length} عميل</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>الاسم</TableHead>
-                    <TableHead>الهاتف</TableHead>
-                    <TableHead>المحافظة</TableHead>
-                    <TableHead>إجمالي الشراء</TableHead>
-                    <TableHead>المدفوع</TableHead>
-                    <TableHead>المتبقي</TableHead>
-                    <TableHead>النقاط</TableHead>
-                    <TableHead>الطلبات</TableHead>
-                    <TableHead>الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.length > 0 ? (
-                    filteredCustomers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell className="font-medium">{customer.name}</TableCell>
-                        <TableCell>{customer.phone}</TableCell>
-                        <TableCell>{customer.governorate}</TableCell>
-                        <TableCell>{Number(customer.totalSpent).toFixed(2)} ج.م</TableCell>
-                        <TableCell>{Number(customer.totalPaid).toFixed(2)} ج.م</TableCell>
-                        <TableCell className={Number(customer.remainingDebt) > 0 ? "text-red-600 font-bold" : ""}>
-                          {Number(customer.remainingDebt).toFixed(2)} ج.م
-                        </TableCell>
-                        <TableCell>{customer.points}</TableCell>
-                        <TableCell>{customer.orders}</TableCell>
-                        <TableCell>
-                          <Dialog open={isDetailsDialogOpen && selectedCustomer?.id === customer.id} onOpenChange={setIsDetailsDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(customer)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>تفاصيل العميل</DialogTitle>
-                              </DialogHeader>
-                              {selectedCustomer && (
-                                <div className="space-y-4">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">الاسم</p>
-                                    <p className="font-medium">{selectedCustomer.name}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">الهاتف</p>
-                                    <p className="font-medium">{selectedCustomer.phone}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">المحافظة</p>
-                                    <p className="font-medium">{selectedCustomer.governorate}</p>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">إجمالي الشراء</p>
-                                      <p className="font-medium">{Number(selectedCustomer.totalSpent).toFixed(2)} ج.م</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">المدفوع</p>
-                                      <p className="font-medium">{Number(selectedCustomer.totalPaid).toFixed(2)} ج.م</p>
-                                    </div>
-                                  </div>
-                                  {Number(selectedCustomer.remainingDebt) > 0 && (
-                                    <>
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">المتبقي</p>
-                                        <p className="font-bold text-red-600">{Number(selectedCustomer.remainingDebt).toFixed(2)} ج.م</p>
-                                      </div>
-                                      <div>
-                                        <label className="text-sm font-medium">تسجيل دفعة</label>
-                                        <Input
-                                          type="number"
-                                          placeholder="المبلغ"
-                                          value={paymentAmount}
-                                          onChange={(e) => setPaymentAmount(e.target.value)}
-                                          className="mt-1"
-                                        />
-                                      </div>
-                                      <Button onClick={handleRecordPayment} className="w-full">
-                                        تسجيل الدفعة
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </DialogContent>
-                          </Dialog>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        لا توجد عملاء
+      {/* Customers Table */}
+      <Card className="border-none shadow-sm overflow-hidden bg-white">
+        <CardHeader className="border-b bg-slate-50/50">
+          <CardTitle className="text-lg">قائمة العملاء</CardTitle>
+          <CardDescription>إجمالي العملاء: {customers.length}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow>
+                  <TableHead className="text-right py-4 font-bold">العميل</TableHead>
+                  <TableHead className="text-right py-4 font-bold">المحافظة</TableHead>
+                  <TableHead className="text-right py-4 font-bold">إجمالي المشتريات</TableHead>
+                  <TableHead className="text-right py-4 font-bold">المدفوع</TableHead>
+                  <TableHead className="text-right py-4 font-bold">المتبقي</TableHead>
+                  <TableHead className="text-right py-4 font-bold">النقاط</TableHead>
+                  <TableHead className="text-right py-4 font-bold">الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  [1, 2, 3, 4, 5].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={7} className="p-4">
+                        <Skeleton className="h-12 w-full rounded-lg" />
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  ))
+                ) : customers.length > 0 ? (
+                  customers.map((customer: any) => {
+                    const hasDebt = Number(customer.remainingDebt) > 0;
+                    return (
+                      <TableRow key={customer.id} className="hover:bg-slate-50 transition-colors group">
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                              <User className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="font-bold">{customer.name}</p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {customer.phone}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700">
+                            <MapPin className="h-3 w-3 text-primary" />
+                            {customer.governorate || "غير محدد"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-slate-900">{Number(customer.totalSpent).toFixed(2)} ج.م</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-green-600">{Number(customer.totalPaid).toFixed(2)} ج.م</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-bold ${hasDebt ? "text-red-600" : "text-slate-400"}`}>
+                            {Number(customer.remainingDebt).toFixed(2)} ج.م
+                            {hasDebt && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-100 gap-1 font-bold">
+                            <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                            {customer.points}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" className="rounded-lg h-8 px-2">
+                            التفاصيل
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      لم يتم العثور على عملاء مطابقين.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

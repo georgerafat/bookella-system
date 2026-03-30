@@ -1,6 +1,24 @@
-import { eq } from "drizzle-orm";
+import { eq, like, and, sql, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import {
+  InsertUser,
+  users,
+  books,
+  customers,
+  orders,
+  orderItems,
+  borrowings,
+  suppliers,
+  bundles,
+  bundleItems,
+  promoCodes,
+  payments,
+  pointsHistory,
+  Book,
+  Customer,
+  Order,
+  Borrowing,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +107,106 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// --- Books Queries ---
+export async function getBooks(filters?: { query?: string; category?: string; limit?: number; offset?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(books);
+  const conditions = [];
+
+  if (filters?.query) {
+    conditions.push(sql`${books.title} LIKE ${`%${filters.query}%`} OR ${books.author} LIKE ${`%${filters.query}%`}`);
+  }
+  if (filters?.category) {
+    conditions.push(eq(books.category, filters.category));
+  }
+
+  if (conditions.length > 0) {
+    // @ts-ignore
+    query = query.where(and(...conditions));
+  }
+
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset) {
+    query = query.offset(filters.offset);
+  }
+
+  return await query;
+}
+
+// --- Customers Queries ---
+export async function getCustomers(filters?: { query?: string; limit?: number; offset?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(customers);
+  if (filters?.query) {
+    query = query.where(sql`${customers.name} LIKE ${`%${filters.query}%`} OR ${customers.phone} LIKE ${`%${filters.query}%`}`);
+  }
+
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset) {
+    query = query.offset(filters.offset);
+  }
+
+  return await query;
+}
+
+// --- Orders Queries ---
+export async function getOrders(filters?: { status?: string; governorate?: string; limit?: number; offset?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(orders);
+  const conditions = [];
+
+  if (filters?.status) {
+    // @ts-ignore
+    conditions.push(eq(orders.orderStatus, filters.status));
+  }
+  if (filters?.governorate) {
+    conditions.push(eq(orders.governorate, filters.governorate));
+  }
+
+  if (conditions.length > 0) {
+    // @ts-ignore
+    query = query.where(and(...conditions));
+  }
+
+  query = query.orderBy(desc(orders.createdAt));
+
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset) {
+    query = query.offset(filters.offset);
+  }
+
+  return await query;
+}
+
+// --- Borrowings Queries ---
+export async function getBorrowings(filters?: { status?: string; limit?: number; offset?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(borrowings);
+  if (filters?.status) {
+    // @ts-ignore
+    query = query.where(eq(borrowings.status, filters.status));
+  }
+
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset) {
+    query = query.offset(filters.offset);
+  }
+
+  return await query;
+}

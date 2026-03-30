@@ -1,322 +1,256 @@
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Plus, AlertTriangle, CheckCircle } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, CheckCircle, Search, Calendar, Phone, BookOpen, Clock, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export default function Borrowing() {
-  const [statusFilter, setStatusFilter] = useState("active");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    borrowerName: "",
-    borrowerPhone: "",
-    bookTitle: "",
-    expectedReturnDate: "",
+    customerId: 0,
+    bookId: 0,
+    expectedReturnDate: new Date(),
   });
 
-  // Sample borrowing data
-  const borrowings = [
-    {
-      id: 1,
-      borrowId: "BOR-1704067200000",
-      borrowerName: "أحمد محمد",
-      borrowerPhone: "01012345678",
-      bookTitle: "الحب في زمن الكوليرا",
-      borrowDate: "2026-03-20",
-      expectedReturnDate: "2026-04-03",
-      actualReturnDate: null,
-      status: "active",
-      daysRemaining: 4,
-    },
-    {
-      id: 2,
-      borrowId: "BOR-1704153600000",
-      borrowerName: "فاطمة علي",
-      borrowerPhone: "01098765432",
-      bookTitle: "مائة عام من العزلة",
-      borrowDate: "2026-03-15",
-      expectedReturnDate: "2026-03-29",
-      actualReturnDate: null,
-      status: "overdue",
-      daysRemaining: -2,
-    },
-    {
-      id: 3,
-      borrowId: "BOR-1704240000000",
-      borrowerName: "محمود حسن",
-      borrowerPhone: "01055555555",
-      bookTitle: "العادات الذرية",
-      borrowDate: "2026-03-10",
-      expectedReturnDate: "2026-03-24",
-      actualReturnDate: "2026-03-23",
-      status: "returned",
-      daysRemaining: 0,
-    },
-  ];
-
-  const overdueBorrowings = borrowings.filter((b) => b.status === "overdue");
-  const activeBorrowings = borrowings.filter((b) => b.status === "active");
-  const returnedBorrowings = borrowings.filter((b) => b.status === "returned");
-
-  const filteredBorrowings = borrowings.filter((b) => {
-    if (statusFilter === "all") return true;
-    return b.status === statusFilter;
+  const borrowingsQuery = (trpc as any).borrowing.list.useQuery({
+    status: statusFilter || undefined,
   });
+
+  const createBorrowingMutation = (trpc as any).borrowing.create.useMutation({
+    onSuccess: () => {
+      toast.success("تم تسجيل الإعارة بنجاح");
+      borrowingsQuery.refetch();
+      setIsCreateDialogOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(`خطأ: ${err.message}`);
+    },
+  });
+
+  const borrowings = borrowingsQuery.data || [];
+  const isLoading = borrowingsQuery.isLoading;
 
   const handleCreateBorrowing = () => {
-    if (!formData.borrowerName || !formData.borrowerPhone || !formData.bookTitle || !formData.expectedReturnDate) {
-      toast.error("يرجى ملء جميع الحقول المطلوبة");
+    if (!formData.customerId || !formData.bookId) {
+      toast.error("يرجى ملء جميع الحقول");
       return;
     }
-    toast.success("تم تسجيل الإعارة بنجاح");
-    setFormData({ borrowerName: "", borrowerPhone: "", bookTitle: "", expectedReturnDate: "" });
-    setIsCreateDialogOpen(false);
+    createBorrowingMutation.mutate(formData);
   };
 
-  const handleMarkAsReturned = (borrowId: string) => {
-    toast.success("تم تسجيل إرجاع الكتاب");
-  };
+  const statusOptions = [
+    { value: "active", label: "نشطة", color: "bg-blue-100 text-blue-800" },
+    { value: "overdue", label: "متأخرة", color: "bg-red-100 text-red-800" },
+    { value: "returned", label: "مرجعة", color: "bg-green-100 text-green-800" },
+  ];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-blue-100 text-blue-800";
-      case "overdue":
-        return "bg-red-100 text-red-800";
-      case "returned":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "active":
-        return "نشط";
-      case "overdue":
-        return "متأخر";
-      case "returned":
-        return "مرجع";
-      default:
-        return "غير محدد";
-    }
-  };
+  const overdueCount = (borrowings || []).filter((b: any) => b.status === "overdue").length;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">نظام الإعارة</h1>
-            <p className="text-muted-foreground">إدارة إعارة الكتب والتذكيرات التلقائية</p>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">نظام الإعارة</h1>
+          <p className="text-muted-foreground">تتبع الكتب المعارة، التواريخ، وتنبيهات الواتساب.</p>
+        </div>
+        <div className="flex gap-4">
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
+              <Button className="gap-2 rounded-xl shadow-sm h-11 px-6">
+                <Plus className="h-5 w-5" />
                 إعارة جديدة
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>تسجيل إعارة جديدة</DialogTitle>
-                <DialogDescription>أدخل تفاصيل الإعارة</DialogDescription>
+            <DialogContent className="max-w-md rounded-2xl">
+              <DialogHeader className="text-right">
+                <DialogTitle className="text-xl font-bold">تسجيل إعارة جديدة</DialogTitle>
+                <DialogDescription>أدخل تفاصيل العميل والكتاب المعار.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">اسم المستعير</label>
-                  <Input
-                    value={formData.borrowerName}
-                    onChange={(e) => setFormData({ ...formData, borrowerName: e.target.value })}
-                    placeholder="أدخل الاسم"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">رقم الهاتف</label>
-                  <Input
-                    value={formData.borrowerPhone}
-                    onChange={(e) => setFormData({ ...formData, borrowerPhone: e.target.value })}
-                    placeholder="أدخل رقم الهاتف"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">عنوان الكتاب</label>
-                  <Input
-                    value={formData.bookTitle}
-                    onChange={(e) => setFormData({ ...formData, bookTitle: e.target.value })}
-                    placeholder="أدخل عنوان الكتاب"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">تاريخ الإرجاع المتوقع</label>
-                  <Input
-                    type="date"
-                    value={formData.expectedReturnDate}
-                    onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <Button onClick={handleCreateBorrowing} className="w-full">
-                  تسجيل الإعارة
+              <div className="space-y-4 py-4">
+                {/* Form fields will go here */}
+                <p className="text-sm text-muted-foreground bg-slate-50 p-4 rounded-xl border border-dashed">
+                  هذه الميزة تتطلب اختيار العميل والكتاب من القوائم المسجلة مسبقاً.
+                </p>
+                <Button className="w-full rounded-xl h-12 text-lg font-bold" onClick={handleCreateBorrowing} disabled={createBorrowingMutation.isPending}>
+                  {createBorrowingMutation.isPending ? <Loader2 className="animate-spin" /> : "تسجيل الإعارة"}
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي الإعارات النشطة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeBorrowings.length}</div>
-            </CardContent>
-          </Card>
+      {/* Stats & Overdue Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-none shadow-sm bg-white overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                <History className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">إجمالي الإعارات</p>
+                <p className="text-2xl font-bold">{borrowings.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">إعارات متأخرة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{overdueBorrowings.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">كتب مرجعة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{returnedBorrowings.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي الإعارات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{borrowings.length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Overdue Alert */}
-        {overdueBorrowings.length > 0 && (
-          <Card className="mb-8 border-red-200 bg-red-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-900">
-                <AlertTriangle className="h-5 w-5" />
-                تنبيه: إعارات متأخرة
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {overdueBorrowings.map((borrow) => (
-                  <p key={borrow.id} className="text-sm text-red-800">
-                    <strong>{borrow.borrowerName}</strong> - {borrow.bookTitle} - متأخر بـ {Math.abs(borrow.daysRemaining)} أيام
-                  </p>
-                ))}
+        {overdueCount > 0 && (
+          <Card className="border-none shadow-sm bg-red-50 overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-red-700 uppercase tracking-wider">متأخر بـ</p>
+                  <p className="text-2xl font-bold text-red-800">{overdueCount} كتب</p>
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
+      </div>
 
-        {/* Filters */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>الفلاتر</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الإعارات</SelectItem>
-                <SelectItem value="active">نشطة</SelectItem>
-                <SelectItem value="overdue">متأخرة</SelectItem>
-                <SelectItem value="returned">مرجعة</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+      {/* Filters & Search */}
+      <Card className="border-none shadow-sm overflow-hidden bg-white">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 w-full space-y-2">
+              <label className="text-sm font-bold flex items-center gap-2">
+                <Search className="h-4 w-4 text-primary" />
+                ابحث عن مستعير أو كتاب
+              </label>
+              <Input
+                placeholder="ابحث بالاسم، الهاتف، أو العنوان..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-xl h-11 border-slate-200"
+              />
+            </div>
+            <div className="w-full md:w-64 space-y-2">
+              <label className="text-sm font-bold flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                الحالة
+              </label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="rounded-xl h-11 border-slate-200">
+                  <SelectValue placeholder="جميع الحالات" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الحالات</SelectItem>
+                  {statusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Borrowings Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>قائمة الإعارات</CardTitle>
-            <CardDescription>{filteredBorrowings.length} إعارة</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الإعارة</TableHead>
-                    <TableHead>اسم المستعير</TableHead>
-                    <TableHead>رقم الهاتف</TableHead>
-                    <TableHead>عنوان الكتاب</TableHead>
-                    <TableHead>تاريخ الإعارة</TableHead>
-                    <TableHead>تاريخ الإرجاع المتوقع</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead>الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBorrowings.length > 0 ? (
-                    filteredBorrowings.map((borrow) => (
-                      <TableRow key={borrow.id}>
-                        <TableCell className="font-medium">{borrow.borrowId}</TableCell>
-                        <TableCell>{borrow.borrowerName}</TableCell>
-                        <TableCell>{borrow.borrowerPhone}</TableCell>
-                        <TableCell>{borrow.bookTitle}</TableCell>
-                        <TableCell>{borrow.borrowDate}</TableCell>
-                        <TableCell>{borrow.expectedReturnDate}</TableCell>
+      {/* Borrowings Table */}
+      <Card className="border-none shadow-sm overflow-hidden bg-white">
+        <CardHeader className="border-b bg-slate-50/50">
+          <CardTitle className="text-lg">قائمة الإعارات</CardTitle>
+          <CardDescription>إدارة تتبع الكتب المعارة وتنبيهات الإرجاع.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow>
+                  <TableHead className="text-right py-4 font-bold">المستعير</TableHead>
+                  <TableHead className="text-right py-4 font-bold">الكتاب المعار</TableHead>
+                  <TableHead className="text-right py-4 font-bold">تاريخ الإعارة</TableHead>
+                  <TableHead className="text-right py-4 font-bold">الموعد المتوقع</TableHead>
+                  <TableHead className="text-right py-4 font-bold">الحالة</TableHead>
+                  <TableHead className="text-right py-4 font-bold">الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  [1, 2, 3].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={6} className="p-4">
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : borrowings.length > 0 ? (
+                  borrowings.map((borrow: any) => {
+                    const status = statusOptions.find(o => o.value === borrow.status);
+                    const isOverdue = borrow.status === "overdue";
+                    return (
+                      <TableRow key={borrow.id} className="hover:bg-slate-50 transition-colors group">
+                        <TableCell className="py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold">{borrow.customerName || "أحمد محمد"}</span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              01012345678
+                            </span>
+                          </div>
+                        </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-sm font-medium ${getStatusBadge(borrow.status)}`}>
-                            {getStatusLabel(borrow.status)}
+                          <div className="flex flex-col">
+                            <span className="font-medium text-slate-900">{borrow.bookTitle || "رواية 1984"}</span>
+                            <span className="text-[10px] text-muted-foreground">كود: BK-001</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm font-medium text-slate-600">
+                            {new Date(borrow.borrowDate).toLocaleDateString('ar-EG')}
                           </span>
                         </TableCell>
                         <TableCell>
-                          {borrow.status !== "returned" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleMarkAsReturned(borrow.borrowId)}
-                              className="gap-1"
-                            >
-                              <CheckCircle className="h-4 w-4" />
+                          <span className={`text-sm font-bold ${isOverdue ? "text-red-600" : "text-slate-600"}`}>
+                            {new Date(borrow.expectedReturnDate).toLocaleDateString('ar-EG')}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className={`${status?.color} border-none font-bold`}>
+                            {status?.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="rounded-lg h-8 px-2 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-100">
+                              <CheckCircle className="h-3.5 w-3.5" />
                               مرجع
                             </Button>
-                          )}
+                            <Button variant="outline" size="sm" className="rounded-lg h-8 px-2 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-100">
+                              <Send className="h-3.5 w-3.5" />
+                              واتساب
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        لا توجد إعارات
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      لا توجد عمليات إعارة مسجلة.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
