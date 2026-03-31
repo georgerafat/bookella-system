@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التحكم", path: "/" },
+  { icon: ShoppingBag, label: "طلب جديد", path: "/create-order" },
   { icon: BookOpen, label: "إدارة الكتب", path: "/books" },
   { icon: ShoppingBag, label: "إدارة الطلبات", path: "/orders" },
   { icon: Users, label: "إدارة العملاء", path: "/customers" },

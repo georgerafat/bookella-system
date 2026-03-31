@@ -10,6 +10,7 @@ import Books from "./pages/Books";
 import Orders from "./pages/Orders";
 import Customers from "./pages/Customers";
 import Borrowing from "./pages/Borrowing";
+import CreateOrderAdvanced from "./pages/CreateOrderAdvanced";
 
 function Router() {
   return (
@@ -37,6 +38,11 @@ function Router() {
       <Route path="/borrowing">
         <DashboardLayout>
           <Borrowing />
+        </DashboardLayout>
+      </Route>
+      <Route path="/create-order">
+        <DashboardLayout>
+          <CreateOrderAdvanced />
         </DashboardLayout>
       </Route>
       <Route path="/404" component={NotFound} />
