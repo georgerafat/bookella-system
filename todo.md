@@ -85,11 +85,28 @@
 - [ ] Display import progress and errors
 
 ## Phase 12: WhatsApp Integration
-- [ ] Setup WhatsApp API integration
+- [ ] Setup WhatsApp API integration (Twilio)
 - [ ] Send borrowing return reminders (1-2 days before)
 - [ ] Send overdue borrowing notifications
 - [ ] Send payment reminders for partial payments
 - [ ] Track notification status in database
+- [ ] Create WhatsApp notification UI
+
+## Phase 13: PDF Reports Generation
+- [ ] Generate monthly profit reports with charts
+- [ ] Export top selling books report
+- [ ] Export top customers report
+- [ ] Create financial summary reports
+- [ ] Add date range filtering for reports
+- [ ] Create downloadable PDF files
+
+## Phase 14: Dynamic Promo Code & Bundle System
+- [ ] Create promo code management interface
+- [ ] Build bundle creation system
+- [ ] Implement automatic discount calculation
+- [ ] Auto-deduct bundle gifts from inventory
+- [ ] Apply bundles to orders
+- [ ] Track promo code usage statistics
 
 ## Phase 13: UI Polish & Testing
 - [ ] RTL (Right-to-Left) layout verification

@@ -11,6 +11,8 @@ import Orders from "./pages/Orders";
 import Customers from "./pages/Customers";
 import Borrowing from "./pages/Borrowing";
 import CreateOrderAdvanced from "./pages/CreateOrderAdvanced";
+import PromoAndBundles from "./pages/PromoAndBundles";
+import Reports from "./pages/Reports";
 
 function Router() {
   return (
@@ -43,6 +45,16 @@ function Router() {
       <Route path="/create-order">
         <DashboardLayout>
           <CreateOrderAdvanced />
+        </DashboardLayout>
+      </Route>
+      <Route path="/promo-bundles">
+        <DashboardLayout>
+          <PromoAndBundles />
+        </DashboardLayout>
+      </Route>
+      <Route path="/reports">
+        <DashboardLayout>
+          <Reports />
         </DashboardLayout>
       </Route>
       <Route path="/404" component={NotFound} />

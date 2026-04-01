@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, BookOpen, ShoppingBag, Landmark, Package, Settings, History } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, BookOpen, ShoppingBag, Landmark, Package, Settings, History, Tag, FileText } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -34,8 +34,8 @@ const menuItems = [
   { icon: ShoppingBag, label: "إدارة الطلبات", path: "/orders" },
   { icon: Users, label: "إدارة العملاء", path: "/customers" },
   { icon: History, label: "نظام الإعارة", path: "/borrowing" },
-  { icon: Package, label: "العروض والمخزون", path: "/inventory" },
-  { icon: Landmark, label: "المديونيات والمالية", path: "/finance" },
+  { icon: Tag, label: "العروض والكوبونات", path: "/promo-bundles" },
+  { icon: FileText, label: "التقارير والتحليلات", path: "/reports" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
